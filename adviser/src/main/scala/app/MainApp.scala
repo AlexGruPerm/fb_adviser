@@ -38,10 +38,11 @@ object MainApp extends ZIOAppDefault {
       console <- ZIO.console
       fbdown <- ZIO.service[FbDownloader]
       result <- fbdown.getUrlContent(url =
-         "https://line05w.bk6bba-resources.com/line/desktop/topEvents3?place=live&sysId=1&lang=ru&salt=33kcb6w4ydl56iud3p&supertop=4&scopeMarket=1600"
+         //"https://line05w.bk6bba-resources.com/line/desktop/topEvents3?place=live&sysId=1&lang=ru&salt=33kcb6w4ydl56iud3p&supertop=4&scopeMarket=1600"
+        "https://line05w.bk6bba-resources.com/line/desktop/topEvents3?place=live&sysId=1&lang=ru&scopeMarket=1600"
       )
       //_ <- console.printLine(result)
-      _ <- console.printLine(s" FINISH reult length = ${result.length} !!!")
+      _ <- console.printLine(s" FINISH reult length = ${result.result} !!!")
   } yield ()
 
   val mainApp: ZIO[Any, Throwable, Unit] = parserEffect.provide(

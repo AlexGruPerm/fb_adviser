@@ -22,6 +22,8 @@ case class Market(
                   rows: Seq[Row]
                 )
 
+case class OneScore(c1: String, c2:String, title: Option[String])
+
 case class LiveEvent(
                       id: Long,
                       number: Long,
@@ -53,7 +55,7 @@ case class LiveEvent(
                       scoreFunction: String,
                       //scoreComment:(0-1) https:\/\/elevensports.com\/ru\/view\/event\/cl4b8248c82l70jbfzgjhhcch,
                       //scoreCommentTail:https:\/\/elevensports.com\/ru\/view\/event\/cl4b8248c82l70jbfzgjhhcch,
-                      //scores:[[{c1:0,c2:1}],[{c1:0,c2:1,title:тайм},
+                      scores: Seq[Seq[OneScore]],
                       markets: Seq[Market]
                     )
 
