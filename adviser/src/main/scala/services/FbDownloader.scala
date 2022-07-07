@@ -22,6 +22,8 @@ import io.circe.generic.auto._
 import io.circe.optics.JsonPath
 import io.circe.syntax._
 
+import java.sql.Statement
+
 
 /**
  *
@@ -51,7 +53,7 @@ import io.circe.syntax._
 
 
   //3. Service implementations (classes) should accept all dependencies in constructor
-  case class FbDownloaderImpl(console: Console, clock: Clock, client: SttpClient) extends FbDownloader {
+  case class FbDownloaderImpl(console: Console, clock: Clock, client: SttpClient, conn: PgConnection) extends FbDownloader {
 
     val _LiveEventsResponse = root.value.result.string
 
@@ -75,61 +77,85 @@ import io.circe.syntax._
         evs = response.body.right.get.events
         evh = evs.head
 
+        //todo: we need combine result data and execute inserts
+        // with using evs
+        // construct c.c. as data structure to future use to inserts.
+
+        pgc <- conn.connection
+        //INSERT INTO pages VALUES(DEFAULT) RETURNING id;
+        pstmt  = pgc.prepareStatement("insert into fba_load default values;",Statement.RETURN_GENERATED_KEYS)
+        resInsert = pstmt.executeUpdate()
+        keyset = pstmt.getGeneratedKeys()
+        _ = keyset.next()
+        idFbaLoad = keyset.getInt(1)
+        _ <- console.printLine(s" insertion ${resInsert} row with ID = ${idFbaLoad}")
+        pstmt = pgc.prepareStatement(
+          s"insert into events(fba_load_id, skid, skname, team1Id,team1, team2Id,team2, startTimeTimestamp, eventName) values(?,?,?,?,?,?,?,?,?);")
+        _ <- ZIO.foreach(evs){ev =>
+              pstmt.setLong(1, idFbaLoad)
+              pstmt.setLong(2, ev.skId)
+              pstmt.setString(3, ev.skName)
+              pstmt.setLong(4, ev.team1Id)
+              pstmt.setString(5, ev.team1)
+              pstmt.setLong(6, ev.team2Id)
+              pstmt.setString(7, ev.team2)
+              pstmt.setLong(8, ev.startTimeTimestamp)
+              pstmt.setString(9, ev.eventName)
+              ZIO.succeed(pstmt.executeUpdate())
+        }
+
+          /*
+          ######################################
         //full output one event
-        _ <- ZIO.foreach(evs.filter(e => e.markets.nonEmpty && e.markets.exists(mf => mf.ident == "Results"))){
+        _ <- ZIO.foreach(evs.filter(e => e.markets.nonEmpty && e.timer.nonEmpty && e.markets.exists(mf => mf.ident == "Results"))){
           e => console.printLine(s" ${e.id} - ${e.skName} -[ ${e.team1} - ${e.team2} ] - ${e.place} - ${e.timer}") *>
             //console.printLine(s"  market_count = ${e.markets.size}") *>
-            ZIO.foreach(e.markets.filter(mf => mf.ident == "Results" && mf.rows.nonEmpty && mf.rows.size == 2)){
+            ZIO.foreach(e.markets.filter(mf => mf.ident == "Results" && mf.rows.nonEmpty && mf.rows.size >= 2)){
               m => console.printLine(s"   ${m.marketId} - ${m.caption} - ${m.ident} - ${m.sortOrder} - rows [${m.rows.size}]") *>
                 //ZIO.foreach(m.rows) {r => console.printLine(s"  ROW isTitle = ${r.isTitle} - CELLS SIZE = ${r.cells.size}") *>
                 (if (m.rows.nonEmpty &&
-                  m.rows.size == 2 &&
+                  m.rows.size >= 2 &&
                   m.rows(0).cells.nonEmpty &&
-                  m.rows(0).cells.size == 4 &&
+                  m.rows(0).cells.size >= 4 &&
                   m.rows(1).cells.nonEmpty &&
-                  m.rows(1).cells.size == 4 //todo: add more filter.
+                  m.rows(1).cells.size >= 4 //todo: add more filter.
                     ) {
                     val r0 = m.rows(0)
                     val r1 = m.rows(1)
                     console.printLine{s"${r0.cells(1).caption} - ${r1.cells(1).value} score (this team) : ${e.scores(0).head.c1}"} *>
                       console.printLine(s"${r0.cells(2).caption} - ${r1.cells(2).value}") *>
                       console.printLine(s"${r0.cells(3).caption} - ${r1.cells(3).value} score (this team) : ${e.scores(0).head.c1}")
-                  /*
-                     s" ${._1.isTitle} - [${zs._1.eventid} - ${zs._2.eventid}] - " +
-                        s"[${zs._1.factorid} - ${zs._2.factorid}] - " +
-                        s"[${zs._1.caption} - ${zs._2.caption}] - " +
-                        s"[${zs._1.value} - ${zs._2.value}]"
-                  */
                 } else {
                   console.printLine("not interested!!!")
                 })
-
-
-
-
-                  /*
-                  (if (r.cells.nonEmpty &&
-                      r.cells.size==2 &&
-                      r.cells(0).isTitle == Some(true) &&
-                      r.cells(1).isTitle == None){
-                    ZIO.foreach( Seq(r.cells(0)).zip(Seq(r.cells(1)))) {zs =>
-                      console.printLine{
-                        s" ${zs._1.isTitle} - [${zs._1.eventid} - ${zs._2.eventid}] - " +
-                          s"[${zs._1.factorid} - ${zs._2.factorid}] - " +
-                          s"[${zs._1.caption} - ${zs._2.caption}] - " +
-                          s"[${zs._1.value} - ${zs._2.value}]"
-                      }
-                    }
-                    } else {
-                      console.printLine("not interested!!!")
-                    })
-                  */
                   }          *>
             console.printLine(" ") *>
             console.printLine("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~") *>
-            console.printLine(" ")
+            console.printLine(" ") *>
+            console.printLine("EXECUTE INSERT ")
+                    ######################################
+                    */
 
-                }
+            /*
+            *>
+            ZIO.attempt{
+              for {
+                pgc <- conn.connection
+                pstmt  = pgc.prepareStatement("insert into events(skid) values(?);")
+                _ = pstmt.setInt(1,123)
+                res = pstmt.executeUpdate()
+                _ <- console.printLine(s" result of insertion is : [${res}]")
+              } yield res
+            }
+                  */
+            //conn.execute(s" insert into fba.events(skid) values(${e.skId});") *>
+            /*
+            conn.execute(s" insert into events(skid,skname,team1Id,team1,team2Id,team2) " +
+              s"values(${e.skId},${e.skName},${e.team1Id},${e.team1},${e.team2Id},${e.team2});") *>
+            */
+            //conn.execute("commit;")
+
+                //}
 
 
 
@@ -171,13 +197,16 @@ import io.circe.syntax._
 
   //4. converting service implementation into ZLayer
   object FbDownloaderImpl {
-    val layer: ZLayer[SttpClient,Throwable,FbDownloader] =
+    val layer: ZLayer[SttpClient with PgConnection,Throwable,FbDownloader] =
       ZLayer {
         for {
           console <- ZIO.console
           clock <- ZIO.clock
           client <- ZIO.service[SttpClient]
-        } yield FbDownloaderImpl(console,clock,client)
+          conn <- ZIO.service[PgConnection]
+          c <- conn.connection
+          _ <- console.printLine(s"connection isOpened = ${!c.isClosed}")
+        } yield FbDownloaderImpl(console,clock,client,conn)
       }
   }
 
