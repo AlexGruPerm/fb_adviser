@@ -8,7 +8,9 @@ import sttp.client3.httpclient.zio.HttpClientZioBackend
 import zio.Clock.ClockLive
 import zio.Console.ConsoleLive
 import zio.logging._
-import zio.{Clock, Console, Layer, RLayer, Scope, ULayer, URLayer, ZIO, ZIOAppArgs, ZIOAppDefault, ZLayer}
+import zio.{Clock, Console, Layer, RLayer, Schedule, Scope, ULayer, URLayer, ZIO, ZIOAppArgs, ZIOAppDefault, ZLayer, durationInt}
+
+import java.time.Duration
 
 /**
  *
@@ -36,18 +38,16 @@ object MainApp extends ZIOAppDefault {
 
   val parserEffect :ZIO[PgConnection with SttpClient with FbDownloader, Throwable, Unit] =
     for {
-      console <- ZIO.console
+      //console <- ZIO.console
       fbdown <- ZIO.service[FbDownloader]
-      result <- fbdown.getUrlContent(url =
+      _ <- fbdown.getUrlContent(url =
         //"https://line05w.bk6bba-resources.com/line/desktop/topEvents3?place=live&sysId=1&lang=ru&salt=33kcb6w4ydl56iud3p&supertop=4&scopeMarket=1600"
         //"https://line06w.bk6bba-resources.com/line/desktop/topEvents3?place=live&sysId=1&lang=ru&salt=1jy2797i10bl58mhxjm&supertop=4&scopeMarket=1600"
         //todo: here we need new parser with new c.c.
         //"https://line53w.bk6bba-resources.com/events/list?lang=ru&version=8639286626&scopeMarket=1600"
         //"https://line32w.bk6bba-resources.com/line/desktop/topEvents3?place=live&sysId=1&lang=ru&salt=10i7oc9ftkdl59yfmc1&supertop=4&scopeMarket=1600"
         "https://line06w.bk6bba-resources.com/line/desktop/topEvents3?place=live&sysId=1&lang=ru&salt=7u4qrf8pq08l5a08288&supertop=4&scopeMarket=1600"
-      )
-      //_ <- console.printLine(result)
-      _ <- console.printLine(s" FINISH reult length = ${result.result} !!!")
+      ).repeat(Schedule.spaced(60.seconds))
   } yield ()
 
   val dbConf = DbConfig(
