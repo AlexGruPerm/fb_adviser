@@ -7,3 +7,6 @@
 target
 .bsp
 .idea
+control.conf
+mts.p12
+mts.pem
