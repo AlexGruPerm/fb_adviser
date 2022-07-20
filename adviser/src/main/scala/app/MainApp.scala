@@ -1,7 +1,7 @@
 package app
 
 import fb.{AppConfig, DbConfig}
-import services.{FbDownloader, FbDownloaderImpl, PgConnection, PgConnectionImpl}
+import services.{FbDownloader, FbDownloaderImpl, PgConnection, PgConnectionImpl, TelegBot, TelegBotImpl}
 import sttp.client3.HttpClientSyncBackend
 import sttp.client3.asynchttpclient.zio.{AsyncHttpClientZioBackend, SttpClient}
 import sttp.client3.httpclient.zio.HttpClientZioBackend
@@ -36,18 +36,23 @@ import java.time.Duration
 */
 object MainApp extends ZIOAppDefault {
 
-  val parserEffect :ZIO[PgConnection with SttpClient with FbDownloader, Throwable, Unit] =
+  val parserEffect :ZIO[PgConnection with SttpClient with FbDownloader with TelegBot, Throwable, Unit] =
     for {
       //console <- ZIO.console
       fbdown <- ZIO.service[FbDownloader]
-      _ <- fbdown.getUrlContent(url =
-        //"https://line05w.bk6bba-resources.com/line/desktop/topEvents3?place=live&sysId=1&lang=ru&salt=33kcb6w4ydl56iud3p&supertop=4&scopeMarket=1600"
+      bot <- ZIO.service[TelegBot]
+      fbUrl =         //"https://line05w.bk6bba-resources.com/line/desktop/topEvents3?place=live&sysId=1&lang=ru&salt=33kcb6w4ydl56iud3p&supertop=4&scopeMarket=1600"
         //"https://line06w.bk6bba-resources.com/line/desktop/topEvents3?place=live&sysId=1&lang=ru&salt=1jy2797i10bl58mhxjm&supertop=4&scopeMarket=1600"
         //todo: here we need new parser with new c.c.
         //"https://line53w.bk6bba-resources.com/events/list?lang=ru&version=8639286626&scopeMarket=1600"
         //"https://line32w.bk6bba-resources.com/line/desktop/topEvents3?place=live&sysId=1&lang=ru&salt=10i7oc9ftkdl59yfmc1&supertop=4&scopeMarket=1600"
         "https://line06w.bk6bba-resources.com/line/desktop/topEvents3?place=live&sysId=1&lang=ru&salt=7u4qrf8pq08l5a08288&supertop=4&scopeMarket=1600"
-      ).repeat(Schedule.spaced(60.seconds))
+
+      logicFb <- fbdown.getUrlContent(fbUrl).repeat(Schedule.spaced(60.seconds)).forkDaemon
+      logicBot <- bot.run.repeat(Schedule.spaced(10.seconds)).forkDaemon
+
+      _ <- logicFb.join
+      _ <- logicBot.join
   } yield ()
 
   val dbConf = DbConfig(
@@ -63,7 +68,10 @@ object MainApp extends ZIOAppDefault {
     ZLayer.succeed(appConfig.dbConf),
     PgConnectionImpl.layer,
     AsyncHttpClientZioBackend.layer(),
-    FbDownloaderImpl.layer)
+    FbDownloaderImpl.layer,
+    TelegBotImpl.layer
+    //ZLayer.Debug.tree
+  )
 
   /**
    * https://zio.github.io/zio-logging/docs/overview/overview_index.html#slf4j-bridge
