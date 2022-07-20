@@ -1,6 +1,6 @@
 package app
 
-import fb.{AppConfig, DbConfig}
+import fb.{AppConfig, BotConfig, DbConfig}
 import services.{FbDownloader, FbDownloaderImpl, PgConnection, PgConnectionImpl, TelegBot, TelegBotImpl}
 import sttp.client3.HttpClientSyncBackend
 import sttp.client3.asynchttpclient.zio.{AsyncHttpClientZioBackend, SttpClient}
@@ -9,7 +9,11 @@ import zio.Clock.ClockLive
 import zio.Console.ConsoleLive
 import zio.logging._
 import zio.{Clock, Console, Layer, RLayer, Schedule, Scope, ULayer, URLayer, ZIO, ZIOAppArgs, ZIOAppDefault, ZLayer, durationInt}
+import com.typesafe.config.{Config, ConfigFactory}
+import org.slf4j.LoggerFactory
 
+import scala.reflect.io.File
+import java.io
 import java.time.Duration
 
 /**
@@ -34,7 +38,7 @@ import java.time.Duration
  * 4) State of last parsing ZIO.Ref[timestamp + Seq[Event]]
  * 5) bot core implementation (not reference to any services)
 */
-object MainApp extends ZIOAppDefault {
+object MainApp extends ZIOAppDefault{
 
   val parserEffect :ZIO[PgConnection with SttpClient with FbDownloader with TelegBot, Throwable, Unit] =
     for {
@@ -49,7 +53,7 @@ object MainApp extends ZIOAppDefault {
         "https://line06w.bk6bba-resources.com/line/desktop/topEvents3?place=live&sysId=1&lang=ru&salt=7u4qrf8pq08l5a08288&supertop=4&scopeMarket=1600"
 
       logicFb <- fbdown.getUrlContent(fbUrl).repeat(Schedule.spaced(60.seconds)).forkDaemon
-      logicBot <- bot.run.repeat(Schedule.spaced(10.seconds)).forkDaemon
+      logicBot <- bot.runBot.repeat(Schedule.spaced(10.seconds)).forkDaemon
 
       _ <- logicFb.join
       _ <- logicBot.join
@@ -62,15 +66,60 @@ object MainApp extends ZIOAppDefault {
     "fba"
   )
 
-  val appConfig: AppConfig = AppConfig(dbConf)
+  val log = LoggerFactory.getLogger(getClass.getName)
 
+  val args :List[String] = List("adviser\\src\\main\\resources\\control.conf")
+
+  val config :AppConfig = try {
+    if (args.length == 0) {
+      log.info("There is no external config file.")
+      //ConfigFactory.load()
+      throw new Exception("There is no external config file.")
+    } else {
+      val configFilename :String = System.getProperty("user.dir")+File.separator+args(0)
+      log.info("There is external config file, path="+configFilename)
+      val fileConfig :Config = ConfigFactory.parseFile(new io.File(configFilename))
+      val confPrefix :String = "teleg."
+      log.info("=======================================================")
+      log.info(fileConfig.getString(confPrefix+"webhookUrl"))
+      log.info(fileConfig.getString(confPrefix+"token"))
+      log.info(fileConfig.getInt(confPrefix+"webhook_port").toString)
+      log.info(fileConfig.getString(confPrefix+"keyStorePassword"))
+      log.info(fileConfig.getString(confPrefix+"pubcertpath"))
+      log.info(fileConfig.getString(confPrefix+"p12certpath"))
+      log.info("=======================================================")
+      AppConfig(
+        dbConf, // todo: also parse from this file
+        BotConfig(
+          token = fileConfig.getString(confPrefix+"token"),
+          webhookUrl = fileConfig.getString(confPrefix+"webhookUrl"),
+          webhook_port = fileConfig.getInt(confPrefix+"webhook_port"),
+          keyStorePassword = fileConfig.getString(confPrefix+"keyStorePassword"),
+          pubcertpath = fileConfig.getString(confPrefix+"pubcertpath"),
+          p12certpath = fileConfig.getString(confPrefix+"p12certpath"))
+      )
+    }
+  } catch {
+    case e:Exception =>
+      log.error("ConfigFactory.load - cause:"+e.getCause+" msg:"+e.getMessage)
+      throw e
+
+  }
+
+  //val appConfig: AppConfig = AppConfig(dbConf)
+
+  /*
+  in run parameter
+  adviser\src\main\resources\control.conf
+  */
   val mainApp: ZIO[Any, Throwable, Unit] = parserEffect.provide(
-    ZLayer.succeed(appConfig.dbConf),
+    //ZLayer.succeed(appConfig.dbConf),
+    ZLayer.succeed(config),
     PgConnectionImpl.layer,
     AsyncHttpClientZioBackend.layer(),
     FbDownloaderImpl.layer,
     TelegBotImpl.layer
-    //ZLayer.Debug.tree
+    //ZLayer.Debug.tree,
   )
 
   /**
@@ -79,7 +128,7 @@ object MainApp extends ZIOAppDefault {
    * program.provideCustom(Slf4jBridge.initialize)
   */
 
-  override def run: ZIO[Any with ZIOAppArgs with Scope, Any, Any] = {
+    def run: ZIO[Any with ZIOAppArgs with Scope, Any, Any] = {
     mainApp.exitCode
   }
 }

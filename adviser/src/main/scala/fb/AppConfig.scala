@@ -7,4 +7,13 @@ case class DbConfig(
                      password: String,
                    )
 
-case class AppConfig(dbConf: DbConfig)
+case class BotConfig(
+                     token: String,
+                     webhookUrl: String,
+                     webhook_port: Int,
+                     keyStorePassword: String,
+                     pubcertpath: String,
+                     p12certpath: String,
+                   )
+
+case class AppConfig(dbConf: DbConfig, botConfig: BotConfig)

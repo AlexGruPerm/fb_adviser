@@ -1,6 +1,6 @@
 package services
 
-import fb.DbConfig
+import fb.{AppConfig, DbConfig}
 import zio.{Task, UIO, URLayer, ZIO, ZLayer}
 
 import java.sql.{Connection, DriverManager, ResultSet, Statement, Types}
@@ -67,11 +67,11 @@ import java.util.Properties
 
     //4. converting service implementation into ZLayer
     object PgConnectionImpl{
-      val layer :ZLayer[DbConfig,Throwable,PgConnection] =
+      val layer :ZLayer[AppConfig,Throwable,PgConnection] =
         ZLayer{
           for {
-            cfg <- ZIO.service[DbConfig]
-          } yield PgConnectionImpl(cfg)
+            cfg <- ZIO.service[AppConfig]
+          } yield PgConnectionImpl(cfg.dbConf)
         }
     }
 

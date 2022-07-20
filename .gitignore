@@ -10,3 +10,9 @@ target
 control.conf
 mts.p12
 mts.pem
+/adviser/src/resources/control.conf
+/adviser/src/resources/mts.p12
+/adviser/src/resources/mts.pem
+*.p12
+*.pem
+*.conf
