@@ -7,11 +7,11 @@ import java.io.{File, FileInputStream, InputStream}
 import java.security.{KeyStore, SecureRandom}
 import java.time.LocalDate
 import akka.http.scaladsl.{ConnectionContext, Http, HttpsConnectionContext}
-import com.bot4s.telegram.api.declarative.{Commands, RegexCommands}
-import com.bot4s.telegram.api.{AkkaTelegramBot, Webhook}
+import com.bot4s.telegram.api.declarative.{Action, Commands, JoinRequests, RegexCommands}
+import com.bot4s.telegram.api.{AkkaTelegramBot, RequestHandler, Webhook}
 import com.bot4s.telegram.clients.AkkaHttpClient
 import com.bot4s.telegram.future.Polling
-import com.bot4s.telegram.methods.{ApproveChatJoinRequest, CreateChatInviteLink, DeclineChatJoinRequest, GetChatMenuButton, SetChatMenuButton, SetMyCommands}
+import com.bot4s.telegram.methods.{ApproveChatJoinRequest, CreateChatInviteLink, DeclineChatJoinRequest, GetChatMenuButton, ParseMode, SendMessage, SendPhoto, SetChatMenuButton, SetMyCommands}
 import com.bot4s.telegram.models.{BotCommand, Chat, ChatId, InputFile, KeyboardButton, MenuButton, MenuButtonCommands, MenuButtonDefault, MenuButtonWebApp, Message, ReplyKeyboardMarkup}
 import com.typesafe.config.Config
 import com.bot4s.telegram.models.UpdateType.Filters._
@@ -20,7 +20,6 @@ import javax.net.ssl.{KeyManagerFactory, SSLContext, TrustManagerFactory}
 import scala.concurrent.Future
 import scala.compat.Platform.EOL
 import scala.util.Try
-import com.bot4s.telegram.api.declarative.{Commands, JoinRequests}
 import cats.instances.future._
 import cats.syntax.functor._
 import com.bot4s.telegram.models.UpdateType.UpdateType
@@ -42,17 +41,18 @@ class telegBotWH(config :BotConfig)
     def unapply(s: String): Option[Int] = Try(s.toInt).toOption
   }
 
-  val confPrefix :String = "teleg."
-  val port :Int = config.webhook_port // config.getInt(confPrefix+"webhook_port")
-  val webhookUrl = config.webhookUrl// config.getString(confPrefix+"webhookUrl")
+  val port :Int = config.webhook_port
+  val webhookUrl = config.webhookUrl
   log.info(" webhookUrl="+webhookUrl+" port="+port)
 
-  val certPathStr :String = config.pubcertpath // config.getString(confPrefix+"pubcertpath")
+  val certPathStr :String = config.pubcertpath
   log.info("Certificate Path ="+certPathStr)
 
   override def certificate: Option[InputFile] = Some(
     InputFile(new File(certPathStr).toPath)
   )
+
+  //override def onMessage(action: Action[Future, Message]): Unit = super.onMessage(action)
 
   override def receiveMessage(msg: Message): Future[Unit] = {
     log.info("receiveMessage method!!!")
@@ -63,14 +63,11 @@ class telegBotWH(config :BotConfig)
     }
   }
 
-  val keystorePassword :Array[Char] = config.keyStorePassword/*config.getString(confPrefix+"keyStorePassword")*/.toCharArray
+  val keystorePassword :Array[Char] = config.keyStorePassword.toCharArray
   override val interfaceIp: String = "0.0.0.0"
 
   override def allowedUpdates: Option[Seq[UpdateType]] =
     Some(MessageUpdates ++ InlineUpdates)
-
-  // Set custom context.
-  //Http().setDefaultServerHttpContext(getHttpsContext(keystorePassword))
 
   override val httpsContext: Option[akka.http.scaladsl.HttpsConnectionContext] = Some(getHttpsContext(keystorePassword))
 
@@ -79,7 +76,7 @@ class telegBotWH(config :BotConfig)
     val password: Array[Char] = keystorePassword
 
     val ks: KeyStore = KeyStore.getInstance("PKCS12")
-    val keystore: InputStream = new FileInputStream(config.p12certpath/*config.getString(confPrefix+"p12certpath")*/)
+    val keystore: InputStream = new FileInputStream(config.p12certpath)
 
     require(keystore != null, " - Keystore required!")
     ks.load(keystore, password)
@@ -97,115 +94,34 @@ class telegBotWH(config :BotConfig)
     https
   }
 
-  log.info("AkkaHttpClient - " + config.token /*config.getString(confPrefix+"token")*/)
-  val client = new AkkaHttpClient(config.token/*config.getString(confPrefix+"token")*/)
+  log.info("AkkaHttpClient - " + config.token )
+  val client = new AkkaHttpClient(config.token)
 
-  /*
-  onCommand("res") { implicit msg =>
+  onCommand("begin") { implicit msg =>
     onCommandLog(msg)
-    msg.from match {
-      case Some(user) =>
-        request(
-          SetMyCommands(
-            List(
-              BotCommand("help", "Welcome someone"),
-              BotCommand("author", "You guessed it"),
-              BotCommand("res", "show menu"),
-              BotCommand("link", "link for add"),
-              BotCommand("accept", "accept for add"),
-              BotCommand("deny", "deny for add")
-            )
-          )
-        ).void
-        request(SetChatMenuButton(user.id,Some(MenuButtonDefault()))).flatMap{s =>
-        reply(s.toString)}.recoverWith{case error =>
-        reply(s"error - ${error.getCause + " - " + error.getMessage}")}.void
-      case None => reply("User not found").void
-    }
-  }
-*/
-  /*
-    onCommand("rem") { implicit msg =>
-      onCommandLog(msg)
-      msg.from match {
-        case Some(user) =>
-          request(
-            SetMyCommands(
-              List(
-                BotCommand("help", "Welcome someone"),
-                BotCommand("author", "You guessed it"),
-                BotCommand("getb","get button")
-              )
-            )
-          ).void
-          request(SetChatMenuButton(user.id,Some(MenuButtonDefault()))).flatMap{s =>
-            reply(s.toString)}.recoverWith{case error =>
-            reply(s"error - ${error.getCause + " - " + error.getMessage}")}.void
-        case None => reply("User not found").void
-      }
-    }
-    */
-
-
-
-
-  onCommand("but") { implicit msg =>
-    onCommandLog(msg)
-    reply(text = "HELP !!!",
-      replyMarkup = Some(ReplyKeyboardMarkup.singleButton(button = KeyboardButton(text = "/help"),inputFieldPlaceholder = Some("Нажмите кнопку или введите команду"),selective = Some(true)))
-    )
+    replyMd(s"begin...........................".stripMargin)
     Future.successful[Unit](Unit)
   }
 
-  onCommand("but1") { implicit msg =>
+  onCommand("catch") { implicit msg =>
     onCommandLog(msg)
-    reply(text = "Открыто новое меню, выбирите дальнешее действие.",
-      replyMarkup = Some(ReplyKeyboardMarkup.singleColumn(buttonColumn = Seq(
-        KeyboardButton(text = "/help"),
-        KeyboardButton(text = "/but2")
-      ),resizeKeyboard = Some(true)))
-    )
-    Future.successful[Unit](Unit)
-  }
-
-  var accept: Boolean = true
-
-  onJoinRequest { joinRequest =>
-    if (accept)
-      request(ApproveChatJoinRequest(joinRequest.chat.chatId, joinRequest.from.id)).void
-    else
-      request(DeclineChatJoinRequest(joinRequest.chat.chatId, joinRequest.from.id)).void
-  }
-
-  onCommand("but2") { implicit msg =>
-    onCommandLog(msg)
-    reply(text = "Текст при открытии but2",
-      replyMarkup = Some(ReplyKeyboardMarkup.singleColumn(buttonColumn = Seq(
-        KeyboardButton(text = "/help"),
-        KeyboardButton(text = "/res"),
-        KeyboardButton(text = "/but1"),
-        KeyboardButton(text = "/author")
-      ),resizeKeyboard = Some(true)))
-    )
+    replyMd(s"catch...........................".stripMargin)
     Future.successful[Unit](Unit)
   }
 
 
-
-
-
-
-
-
-
-
-  /*
-    onCommand("/link") { implicit msg =>
-    request(CreateChatInviteLink(ChatId(msg.chat.id), createsJoinRequest = Some(true))).flatMap { link =>
-      reply(s"Invite link is ${link.inviteLink}").void
-    }.recoverWith { case error => reply(s"Unable to create link ${error}").void }
+  def sendMsgToGroup(groupId: Long,textMessage: String): Future[Unit] = {
+    for {
+      _ <- request(SendMessage(groupId, s"*${textMessage}*", Some(ParseMode.Markdown)))
+      /*
+      _ <- request(
+        SendMessage(groupId,
+          s"_${textMessage}_",
+          Some(ParseMode.Markdown),
+          disableWebPagePreview = Some(true)))
+      */
+    } yield ()
   }
-  */
 
   def onCommandLog(msg :Message) ={
     log.info(" Command ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ")
@@ -232,67 +148,5 @@ class telegBotWH(config :BotConfig)
   }
 
 
-  onCommand("/command1") { implicit msg =>
-    replyMd(s"Text1".stripMargin)
-    Future.successful[Unit](Unit)
-  }
-
-  onCommand("/command2") { implicit msg =>
-    replyMd(s"Text2".stripMargin)
-    Future.successful[Unit](Unit)
-  }
-
-
-
-  // String commands.
-  onCommand("/accept") { _ =>
-    Future { accept = true }
-  }
-
-  onCommand("/deny") { _ =>
-    Future { accept = false }
-  }
-
-  onCommand("/link") { implicit msg =>
-    request(CreateChatInviteLink(ChatId(msg.chat.id), createsJoinRequest = Some(true))).flatMap { link =>
-      reply(s"Invite link is ${link.inviteLink}").void
-    }.recoverWith { case error => reply(s"Unable to create link ${error}").void }
-  }
-
-
-
-  // withArgs with pattern matching.
-  onCommand("/inc") { implicit msg =>
-    withArgs {
-      case Seq(Int(i)) =>
-        reply("" + (i + 1)).void
-
-      // Conveniently avoid MatchError, providing hints on usage.
-      case _ =>
-        reply("Invalid argument. Usage: /inc 123").void
-    }
-  }
-
-  onCommand("author") { implicit msg =>
-    onCommandLog(msg)
-    replyMd(
-      s""" *Yakushev Aleksey*
-         | _ugr@bk.ru_
-         | _yakushevaleksey@gmail.com_
-         | telegram = @AlexGruPerm
-         | vk       = https://vk.com/id11099676
-         | linkedin = https://www.linkedin.com/comm/in/yakushevaleksey
-         | gihub    = https://github.com/AlexGruPerm
-         | bigdata  = https://yakushev-bigdata.blogspot.com
-         | oracle   = http://yakushev-oracle.blogspot.com
-             """.stripMargin
-    )
-    Future.successful[Unit](Unit)
-  }
-
-  onCommand("help" ) {
-    implicit msg => reply(BotCommandsHelper.getHelpText)
-      Future.successful[Unit](Unit)
-  }
 
 }

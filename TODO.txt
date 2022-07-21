@@ -1,0 +1,5 @@
+1) Если пользователь блокирует бота, то при попытке отправить сообщение в группу с ним
+16:35:02.692 [scala-execution-context-global-54] ERROR com.bot4s.telegram.clients.AkkaHttpClient - RESPONSE 52b112db-f161-469b-a408-7745e888b848 {}
+com.bot4s.telegram.api.TelegramApiException: Forbidden: bot was blocked by the user
+	at com.bot4s.telegram.api.RequestHandler.processApiResponse(RequestHandler.scala:137)
+

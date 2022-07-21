@@ -146,10 +146,6 @@ import java.sql.Statement
               }
         }
 
-
-
-
-
         //full output one event
         _ <- ZIO.foreach(evs.filter(ei => ei.markets.nonEmpty && ei.timer.nonEmpty && ei.markets.exists(mf => mf.ident == "Results"))){
           e => console.printLine(s" ${e.id} - ${e.skName} -[ ${e.team1} - ${e.team2} ] - ${e.place} - ${e.timer}") *>

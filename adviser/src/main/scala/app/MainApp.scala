@@ -53,7 +53,7 @@ object MainApp extends ZIOAppDefault{
         "https://line06w.bk6bba-resources.com/line/desktop/topEvents3?place=live&sysId=1&lang=ru&salt=7u4qrf8pq08l5a08288&supertop=4&scopeMarket=1600"
 
       logicFb <- fbdown.getUrlContent(fbUrl).repeat(Schedule.spaced(60.seconds)).forkDaemon
-      logicBot <- bot.runBot.repeat(Schedule.spaced(10.seconds)).forkDaemon
+      logicBot <- bot.runBot.repeat(Schedule.spaced(1.seconds)).forkDaemon
 
       _ <- logicFb.join
       _ <- logicBot.join
