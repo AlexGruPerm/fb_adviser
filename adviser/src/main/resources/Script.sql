@@ -37,11 +37,62 @@ create table score(
  team2score   text
 );
 
+drop table tgroup;
+
+-- таблица с ид пользователей, создавших чат с ботом.
+-- один чат, один пользователь.
+create table tgroup(
+ groupId       integer primary key, 
+ ins_datetime  TIMESTAMP default timeofday()::TIMESTAMP,
+ firstname     text,
+ lastname      text,
+ username      text,
+ lang          text,
+ loc_latitude  numeric,
+ loc_longitude numeric,
+ last_cmd_start_dt TIMESTAMP
+);
+
+/*
+drop table chat_status;
+
+create table chat_status(
+ id_chat                integer not null constraint fk_chat_satus_chat references chat(id) on delete cascade,
+ ins_datetime           TIMESTAMP default timeofday()::TIMESTAMP,
+ is_blocked_by_user     integer not null,
+ is_blocked_by_admin    integer not null,
+ id_blocked_by_admin_dt TIMESTAMP default timeofday()::TIMESTAMP,
+ constraint ch_blocked check((is_blocked_by_user=0 and is_blocked_by_admin=0) or (is_blocked_by_admin=1))
+);
+*/
+delete from tgroup;
+select * from tgroup;
+
+INSERT INTO tgroup(groupid,firstname,lastname,username,lang,loc_latitude,loc_longitude) 
+VALUES(322134338,'Aleksey','Yakushev','AlexGruPerm','ru',12.0,34.0) 
+ON CONFLICT (groupid) 
+do update set last_cmd_start_dt = timeofday()::TIMESTAMP;
+
+
+/*
+16:30:29.194 [default-akka.actor.default-dispatcher-8] INFO fb.telegBotWH -  LASTNAME  = Yakushev
+16:30:29.195 [default-akka.actor.default-dispatcher-8] INFO fb.telegBotWH -  USERNAME  = AlexGruPerm
+16:30:29.197 [default-akka.actor.default-dispatcher-8] INFO fb.telegBotWH -   chat(id) = 322134338
+
+16:30:42.666 [default-akka.actor.default-dispatcher-8] INFO fb.telegBotWH -  FIRSTNAME = Светлана
+16:30:42.666 [default-akka.actor.default-dispatcher-8] INFO fb.telegBotWH -  LASTNAME  = Якушева
+16:30:42.666 [default-akka.actor.default-dispatcher-8] INFO fb.telegBotWH -  USERNAME  = YakushevaSveta
+16:30:42.666 [default-akka.actor.default-dispatcher-8] INFO fb.telegBotWH -   chat(id) = 533534191
+*/
+
+select * from chat_status;
+
 delete from fba_load;
 -- delete from events;
 -- delete from score;
 
 select * from fba_load;
+
 
 select * 
 from events e 

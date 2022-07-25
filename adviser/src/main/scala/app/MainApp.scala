@@ -25,11 +25,6 @@ import java.time.Duration
  *
  */
 
- /**
-  * GET and parse JSON using the ZIO async-http-client backend and circe
-  * https://sttp.softwaremill.com/en/latest/examples.html
- */
-
 /**
  * Independent services for:
  * 1) download json as String (source raw json)
@@ -53,67 +48,38 @@ object MainApp extends ZIOAppDefault{
         "https://line06w.bk6bba-resources.com/line/desktop/topEvents3?place=live&sysId=1&lang=ru&salt=7u4qrf8pq08l5a08288&supertop=4&scopeMarket=1600"
 
       logicFb <- fbdown.getUrlContent(fbUrl).repeat(Schedule.spaced(60.seconds)).forkDaemon
-      logicBot <- bot.runBot.repeat(Schedule.spaced(1.seconds)).forkDaemon
+      logicBot <- bot.runBot.repeat(Schedule.spaced(3.seconds)).forkDaemon
 
       _ <- logicFb.join
       _ <- logicBot.join
   } yield ()
-
-  val dbConf = DbConfig(
-    "org.postgresql.Driver",
-    "jdbc:postgresql://127.0.0.1/fba_db",
-    "fba",
-    "fba"
-  )
 
   val log = LoggerFactory.getLogger(getClass.getName)
 
   val args :List[String] = List("adviser\\src\\main\\resources\\control.conf")
 
   val config :AppConfig = try {
-    if (args.length == 0) {
+    if (args.isEmpty) {
       log.info("There is no external config file.")
       //ConfigFactory.load()
       throw new Exception("There is no external config file.")
     } else {
-      val configFilename :String = System.getProperty("user.dir")+File.separator+args(0)
+      val configFilename :String = System.getProperty("user.dir")+File.separator+args.head
       log.info("There is external config file, path="+configFilename)
       val fileConfig :Config = ConfigFactory.parseFile(new io.File(configFilename))
-      val confPrefix :String = "teleg."
-      log.info("=======================================================")
-      log.info(fileConfig.getString(confPrefix+"webhookUrl"))
-      log.info(fileConfig.getString(confPrefix+"token"))
-      log.info(fileConfig.getInt(confPrefix+"webhook_port").toString)
-      log.info(fileConfig.getString(confPrefix+"keyStorePassword"))
-      log.info(fileConfig.getString(confPrefix+"pubcertpath"))
-      log.info(fileConfig.getString(confPrefix+"p12certpath"))
-      log.info("=======================================================")
-      AppConfig(
-        dbConf, // todo: also parse from this file
-        BotConfig(
-          token = fileConfig.getString(confPrefix+"token"),
-          webhookUrl = fileConfig.getString(confPrefix+"webhookUrl"),
-          webhook_port = fileConfig.getInt(confPrefix+"webhook_port"),
-          keyStorePassword = fileConfig.getString(confPrefix+"keyStorePassword"),
-          pubcertpath = fileConfig.getString(confPrefix+"pubcertpath"),
-          p12certpath = fileConfig.getString(confPrefix+"p12certpath"))
-      )
+      ConfigHelper.getConfig(fileConfig)
     }
   } catch {
     case e:Exception =>
       log.error("ConfigFactory.load - cause:"+e.getCause+" msg:"+e.getMessage)
       throw e
-
   }
-
-  //val appConfig: AppConfig = AppConfig(dbConf)
 
   /*
   in run parameter
   adviser\src\main\resources\control.conf
   */
   val mainApp: ZIO[Any, Throwable, Unit] = parserEffect.provide(
-    //ZLayer.succeed(appConfig.dbConf),
     ZLayer.succeed(config),
     PgConnectionImpl.layer,
     AsyncHttpClientZioBackend.layer(),
@@ -127,7 +93,6 @@ object MainApp extends ZIOAppDefault{
    * import zio.logging.slf4j.Slf4jBridge
    * program.provideCustom(Slf4jBridge.initialize)
   */
-
     def run: ZIO[Any with ZIOAppArgs with Scope, Any, Any] = {
     mainApp.exitCode
   }

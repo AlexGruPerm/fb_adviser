@@ -185,7 +185,7 @@ import java.sql.Statement
           client <- ZIO.service[SttpClient]
           conn <- ZIO.service[PgConnection]
           c <- conn.connection
-          _ <- console.printLine(s"connection isOpened = ${!c.isClosed}")
+          _ <- console.printLine(s"[FbDownloaderImpl] connection isOpened = ${!c.isClosed}")
         } yield FbDownloaderImpl(console,clock,client,conn)
       }
   }

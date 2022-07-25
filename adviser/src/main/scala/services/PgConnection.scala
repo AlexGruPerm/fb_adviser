@@ -29,12 +29,6 @@ import java.util.Properties
   }
 
   //2.accessor method inside companion object
-/*
-  object PgConnection{
-    def connection(conf: DbConfig): Task[Connection] = {
-      ???
-    }
-    */
 
   //3. service interface implementation
   case class PgConnectionImpl(conf: DbConfig) extends PgConnection {
@@ -63,6 +57,7 @@ import java.util.Properties
         }
       } yield stex.toString
   }
+
 
 
     //4. converting service implementation into ZLayer

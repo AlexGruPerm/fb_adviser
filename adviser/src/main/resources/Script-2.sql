@@ -6,7 +6,7 @@ select
        --e.timerseconds,
        e.eventname,
        null as "coefficient:",
-       s.team1coeff,
+       s.team1coeff, 
        s.draw_coeff,
        s.team2coeff,
        null as "scores",
