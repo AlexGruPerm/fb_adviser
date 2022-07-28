@@ -1,14 +1,15 @@
 package app
 
+import com.bot4s.telegram.clients.SttpClient
 import fb.{AppConfig, BotConfig, DbConfig}
 import services.{FbDownloader, FbDownloaderImpl, PgConnection, PgConnectionImpl, TelegBot, TelegBotImpl}
-import sttp.client3.HttpClientSyncBackend
-import sttp.client3.asynchttpclient.zio.{AsyncHttpClientZioBackend, SttpClient}
+import sttp.client3.{HttpClientSyncBackend, SttpBackend}
+import sttp.client3.asynchttpclient.zio.AsyncHttpClientZioBackend
 import sttp.client3.httpclient.zio.HttpClientZioBackend
 import zio.Clock.ClockLive
 import zio.Console.ConsoleLive
 import zio.logging._
-import zio.{Clock, Console, Layer, RLayer, Schedule, Scope, ULayer, URLayer, ZIO, ZIOAppArgs, ZIOAppDefault, ZLayer, durationInt}
+import zio.{Clock, Console, Layer, RLayer, Schedule, Scope, Task, ULayer, URLayer, ZIO, ZIOAppArgs, ZIOAppDefault, ZLayer, durationInt}
 import com.typesafe.config.{Config, ConfigFactory}
 import org.slf4j.LoggerFactory
 
@@ -35,7 +36,7 @@ import java.time.Duration
 */
 object MainApp extends ZIOAppDefault{
 
-  val parserEffect :ZIO[PgConnection with SttpClient with FbDownloader with TelegBot, Throwable, Unit] =
+  val parserEffect :ZIO[PgConnection with SttpBackend[Task, Any] with FbDownloader with TelegBot, Throwable, Unit] =
     for {
       //console <- ZIO.console
       fbdown <- ZIO.service[FbDownloader]

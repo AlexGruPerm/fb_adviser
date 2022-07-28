@@ -4,16 +4,19 @@ ThisBuild / organization := "yakushev"
 ThisBuild / version      := "0.1.4"
 ThisBuild / scalaVersion := "2.12.15"
 
-val Version_zio  = "2.0.0-RC6" // "2.0.0"
+val Version_zio  = "2.0.0"//"2.0.0-RC6" // "2.0.0" //todo: try version 2.0
+val Version_zhttp = "2.0.0-RC10"
 val Version_bot4s = "5.6.0"
 val CirceVers = "0.14.2"
 //https://sttp.softwaremill.com/en/latest/backends/zio.html
-val VarsionZioSttp = "3.6.2"
+val VarsionSttp = "3.7.2"
+val VarsionZioSttp = "3.7.2" /*"3.6.2"*/  //todo: 3.7.1
 val VersionPg = "42.4.0"
 val VersionZioConfig = "3.0.1"
 val VersionZioConfigTs = "3.0.1"
 val VersionZioConfigMag = "3.0.1"
 val VersionBot4sTeleg = "5.6.0"
+val zioInterOpCats     = "22.0.0.0"
 
 // PROJECTS
 lazy val global = project
@@ -39,8 +42,11 @@ lazy val dependencies =
     val zio_logging = "dev.zio" %% "zio-logging" % Version_zio
     val zio_test = "dev.zio" %% "zio-test" % Version_zio
     val zio_test_sbt = "dev.zio" %% "zio-test-sbt" % Version_zio
+    val zhttp = "io.d11" %% "zhttp" % Version_zhttp
+    val ZioIoCats = "dev.zio" %% "zio-interop-cats" % zioInterOpCats
 
-    val zio_sttp = "com.softwaremill.sttp.client3" %% "zio" % VarsionZioSttp
+    val zio_sttp = "com.softwaremill.sttp.client3" %% "zio" % VarsionSttp
+    val sttp3_akka = "com.softwaremill.sttp.client3" %% "akka-http-backend" % VarsionSttp
     val zio_sttp_async = "com.softwaremill.sttp.client3" %% "async-http-client-backend-zio" % VarsionZioSttp
     //json support in client3 https://sttp.softwaremill.com/en/latest/json.html
     val zio_sttp_circe = "com.softwaremill.sttp.client3" %% "circe" % VarsionZioSttp // try zio-json
@@ -53,8 +59,8 @@ lazy val dependencies =
     val bot4s_akka = "com.bot4s" %% "telegram-akka" %  Version_bot4s
 
     //val lb = List(logback)
-    val zioDep = List(zio, zio_logging, zio_test, zio_test_sbt,
-      zio_sttp, zio_sttp_async,
+    val zioDep = List(zio, zio_logging, zio_test, zio_test_sbt, ZioIoCats, zhttp,
+      zio_sttp, zio_sttp_async, sttp3_akka,
       zio_sttp_circe//, zio_config, zio_config_typesafe, zio_config_magnolia
     )
     val bot4Dep = List(bot4s_core, bot4s_akka)

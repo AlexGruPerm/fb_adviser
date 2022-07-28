@@ -21,8 +21,11 @@ import io.circe.{Decoder, Encoder}
 import io.circe.generic.auto._
 import io.circe.optics.JsonPath
 import io.circe.syntax._
+import sttp.client3._
+import sttp.client3.akkahttp._
 
 import java.sql.Statement
+import scala.concurrent.Future
 
 
 /**
@@ -53,9 +56,10 @@ import java.sql.Statement
 
 
   //3. Service implementations (classes) should accept all dependencies in constructor
-  case class FbDownloaderImpl(console: Console, clock: Clock, client: SttpClient, conn: PgConnection) extends FbDownloader {
+  case class FbDownloaderImpl(console: Console, clock: Clock, backend: SttpBackend[Task, Any], conn: PgConnection) extends FbDownloader {
 
     val _LiveEventsResponse = root.value.result.string
+
 
     override def getUrlContent(url: String): Task[LiveEventsResponse] =
       for {
@@ -64,7 +68,8 @@ import java.sql.Statement
         _ <- console.printLine("Begin request")
         //basicReq  = basicRequest.post(uri"$url")
         basicReq  = basicRequest.post(uri"$url").response(asJson[LiveEventsResponse])
-        response <- client.send(basicReq)
+        _ <- console.printLine("----- START request -----")
+        response <- basicReq.send(backend)
         _ <- console.printLine(s" response statusText    = ${response.statusText}")
         _ <- console.printLine(s" response code          = ${response.code}")
 
@@ -177,12 +182,12 @@ import java.sql.Statement
 
   //4. converting service implementation into ZLayer
   object FbDownloaderImpl {
-    val layer: ZLayer[SttpClient with PgConnection,Throwable,FbDownloader] =
+    val layer: ZLayer[SttpBackend[Task, Any] with PgConnection,Throwable,FbDownloader] =
       ZLayer {
         for {
           console <- ZIO.console
           clock <- ZIO.clock
-          client <- ZIO.service[SttpClient]
+          client <- ZIO.service[SttpBackend[Task, Any]]
           conn <- ZIO.service[PgConnection]
           c <- conn.connection
           _ <- console.printLine(s"[FbDownloaderImpl] connection isOpened = ${!c.isClosed}")

@@ -50,8 +50,11 @@ create table tgroup(
  lang          text,
  loc_latitude  numeric,
  loc_longitude numeric,
- last_cmd_start_dt TIMESTAMP
+ last_cmd_start_dt TIMESTAMP,
+ is_blck_by_user_dt TIMESTAMP
 );
+
+update tgroup set is_blck_by_user_dt = timeofday()::TIMESTAMP where groupId = ?;
 
 /*
 drop table chat_status;
@@ -65,25 +68,23 @@ create table chat_status(
  constraint ch_blocked check((is_blocked_by_user=0 and is_blocked_by_admin=0) or (is_blocked_by_admin=1))
 );
 */
-delete from tgroup;
+delete from tgroup; 
 select * from tgroup;
+
+select t.groupid,t.firstname,t.lastname from tgroup t where t.is_blck_by_user_dt is null;
+
+update tgroup set is_blck_by_user_dt = timeofday()::TIMESTAMP where groupId = 533534191;
 
 INSERT INTO tgroup(groupid,firstname,lastname,username,lang,loc_latitude,loc_longitude) 
 VALUES(322134338,'Aleksey','Yakushev','AlexGruPerm','ru',12.0,34.0) 
 ON CONFLICT (groupid) 
 do update set last_cmd_start_dt = timeofday()::TIMESTAMP;
 
+INSERT INTO tgroup(groupid,firstname,lastname,username,lang,loc_latitude,loc_longitude) 
+VALUES(533534191,'—ветлана','якушева','YakushevaSveta','ru',21.0,32.0) 
+ON CONFLICT (groupid) 
+do update set last_cmd_start_dt = timeofday()::TIMESTAMP;
 
-/*
-16:30:29.194 [default-akka.actor.default-dispatcher-8] INFO fb.telegBotWH -  LASTNAME  = Yakushev
-16:30:29.195 [default-akka.actor.default-dispatcher-8] INFO fb.telegBotWH -  USERNAME  = AlexGruPerm
-16:30:29.197 [default-akka.actor.default-dispatcher-8] INFO fb.telegBotWH -   chat(id) = 322134338
-
-16:30:42.666 [default-akka.actor.default-dispatcher-8] INFO fb.telegBotWH -  FIRSTNAME = —ветлана
-16:30:42.666 [default-akka.actor.default-dispatcher-8] INFO fb.telegBotWH -  LASTNAME  = якушева
-16:30:42.666 [default-akka.actor.default-dispatcher-8] INFO fb.telegBotWH -  USERNAME  = YakushevaSveta
-16:30:42.666 [default-akka.actor.default-dispatcher-8] INFO fb.telegBotWH -   chat(id) = 533534191
-*/
 
 select * from chat_status;
 
@@ -92,7 +93,6 @@ delete from fba_load;
 -- delete from score;
 
 select * from fba_load;
-
 
 select * 
 from events e 

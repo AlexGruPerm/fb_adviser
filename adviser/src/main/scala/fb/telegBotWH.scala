@@ -137,9 +137,14 @@ class telegBotWH(config :BotConfig, conn: PgConnection)
           resInsertStartCmd.toString
         }
       } yield Future.successful[Unit](Unit)
-    val r :Unit = Runtime.default.unsafeRunAsync(
+    /*val r :Unit = Runtime.default.unsafeRunAsync(
       resFuture
     )
+    */
+    val r :Unit = Unsafe.unsafe { implicit unsafe =>
+      Runtime.default.unsafe.run(resFuture)
+    }
+
     replyMd(s"AFTER start command ...........................".stripMargin)
     Future.successful[Unit](Unit)
   }
