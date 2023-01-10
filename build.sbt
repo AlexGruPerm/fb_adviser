@@ -1,7 +1,7 @@
 name := "fb_adviser"
 
 ThisBuild / organization := "yakushev"
-ThisBuild / version      := "0.1.4"
+ThisBuild / version      := "0.1.5"
 ThisBuild / scalaVersion := "2.12.15"
 
 val Version_zio  = "2.0.0-RC6" // "2.0.0"
@@ -10,9 +10,11 @@ val CirceVers = "0.14.2"
 //https://sttp.softwaremill.com/en/latest/backends/zio.html
 val VarsionZioSttp = "3.6.2"
 val VersionPg = "42.4.0"
+/*
 val VersionZioConfig = "3.0.1"
 val VersionZioConfigTs = "3.0.1"
 val VersionZioConfigMag = "3.0.1"
+*/
 val VersionBot4sTeleg = "5.6.0"
 
 // PROJECTS
@@ -42,9 +44,9 @@ lazy val dependencies =
 
     val zio_sttp = "com.softwaremill.sttp.client3" %% "zio" % VarsionZioSttp
     val zio_sttp_async = "com.softwaremill.sttp.client3" %% "async-http-client-backend-zio" % VarsionZioSttp
-    //json support in client3 https://sttp.softwaremill.com/en/latest/json.html
     val zio_sttp_circe = "com.softwaremill.sttp.client3" %% "circe" % VarsionZioSttp // try zio-json
 
+    //json support in client3 https://sttp.softwaremill.com/en/latest/json.html
     //val zio_config = "dev.zio" %% "zio-config" % VersionZioConfig
     //val zio_config_typesafe = "dev.zio" %% "zio-config-typesafe" % VersionZioConfigTs
     //val zio_config_magnolia = "dev.zio" %% "zio-config-magnolia" % VersionZioConfigMag

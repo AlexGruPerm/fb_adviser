@@ -47,7 +47,7 @@ create table tgroup(
  firstname     text,
  lastname      text,
  username      text,
- lang          text,
+ lang          text, 
  loc_latitude  numeric,
  loc_longitude numeric,
  last_cmd_start_dt TIMESTAMP
